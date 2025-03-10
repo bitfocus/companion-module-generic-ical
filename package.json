@@ -1,6 +1,6 @@
 {
 	"name": "companion-module-ical-scheduler",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "iCal feed integration for Companion",
 	"main": "main.js",
 	"scripts": {

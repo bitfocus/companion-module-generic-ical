@@ -3,7 +3,7 @@
 	"name": "iCal Scheduler",
 	"shortname": "ical-sched",
 	"description": "Schedule Companion actions based on iCal calendar events",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/crackley/companion-module-generic-ical.git",
 	"bugs": "https://github.com/crackley/companion-module-generic-ical/issues",
