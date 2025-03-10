@@ -1,32 +1,24 @@
-const { combineRgb } = require('@companion-module/base')
-
-module.exports = async function (self) {
+module.exports = function (self) {
 	self.setFeedbackDefinitions({
-		ChannelState: {
-			name: 'Example Feedback',
+		eventActive: {
+			name: 'Event Active',
 			type: 'boolean',
-			label: 'Channel State',
+			label: 'Event Status',
 			defaultStyle: {
-				bgcolor: combineRgb(255, 0, 0),
-				color: combineRgb(0, 0, 0),
+				bgcolor: 0xFF0000, // Red
+				color: 0xFFFFFF,   // White
 			},
-			options: [
-				{
-					id: 'num',
-					type: 'number',
-					label: 'Test',
-					default: 5,
-					min: 0,
-					max: 10,
-				},
-			],
+			options: [],
 			callback: (feedback) => {
-				console.log('Hello world!', feedback.options.num)
-				if (feedback.options.num > 5) {
-					return true
-				} else {
-					return false
+				const now = new Date()
+				
+				// Check all events for any that are currently active
+				for (const [, event] of self.events) {
+					if (event.start <= now && event.end >= now) {
+						return true
+					}
 				}
+				return false
 			},
 		},
 	})
