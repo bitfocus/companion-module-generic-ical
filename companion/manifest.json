@@ -5,8 +5,8 @@
 	"description": "Schedule Companion actions based on iCal calendar events",
 	"version": "0.1.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/bitfocus/companion-module-ical-scheduler.git",
-	"bugs": "https://github.com/bitfocus/companion-module-ical-scheduler/issues",
+	"repository": "git+https://github.com/crackley/companion-module-generic-ical.git",
+	"bugs": "https://github.com/crackley/companion-module-generic-ical/issues",
 	"maintainers": [
 		{
 			"name": "Clay Rackley",

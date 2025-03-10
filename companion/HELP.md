@@ -36,4 +36,4 @@ Next Event:
 ## Support
 
 For help and discussions about this module, please visit:
-https://github.com/bitfocus/companion-module-ical-scheduler/issues
+https://github.com/crackley/companion-module-generic-ical/issues
