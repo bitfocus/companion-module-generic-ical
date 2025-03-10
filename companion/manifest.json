@@ -1,8 +1,8 @@
 {
-	"id": "ical-scheduler",
+	"id": "generic-ical",
 	"name": "iCal Scheduler",
-	"shortname": "ical-sched",
-	"description": "Schedule Companion actions based on iCal calendar events",
+	"shortname": "ical",
+	"description": "Control Companion based on iCal calendar events",
 	"version": "1.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/crackley/companion-module-generic-ical.git",
@@ -14,13 +14,13 @@
 		}
 	],
 	"runtime": {
-		"type": "node22",
+		"type": "node18",
 		"api": "nodejs-ipc",
 		"apiVersion": "0.0.0",
 		"entrypoint": "../main.js"
 	},
 	"legacyIds": [],
 	"manufacturer": "Generic",
-	"products": ["iCal Calendar Integration"],
-	"keywords": ["Calendar", "Scheduling", "iCal", "Automation"]
+	"products": ["iCal Scheduler"],
+	"keywords": ["Calendar", "Scheduling"]
 }
