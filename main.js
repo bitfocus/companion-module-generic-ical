@@ -21,6 +21,15 @@ class ModuleInstance extends InstanceBase {
 
 		if (this.config.icalUrl) {
 			await this.setupIcalFeed()
+
+			// Set up feed refresh interval
+			const refreshMinutes = Math.max(1, Math.min(1440, parseInt(this.config.refreshInterval) || 5))
+			this.log('debug', `Setting up feed refresh interval: ${refreshMinutes} minutes`)
+			
+			setInterval(async () => {
+				this.log('debug', '=== Feed Refresh Interval Triggered ===')
+				await this.setupIcalFeed()
+			}, refreshMinutes * 60 * 1000)
 		}
 
 		// Start checking for active events periodically
@@ -87,6 +96,7 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	updateEventVariables() {
+		this.log('debug', '=== Updating Variables ===')
 		const now = new Date()
 		let currentEvent = null
 		let nextEvent = null
@@ -96,11 +106,13 @@ class ModuleInstance extends InstanceBase {
 			// Check for current event
 			if (event.start <= now && event.end >= now) {
 				currentEvent = event
+				this.log('debug', `Found current event: "${event.summary || 'Untitled'}"`)
 			}
 			// Check for next event
 			else if (event.start > now) {
 				if (!nextEvent || event.start < nextEvent.start) {
 					nextEvent = event
+					this.log('debug', `Found next event: "${event.summary || 'Untitled'}"`)
 				}
 			}
 		}
@@ -128,6 +140,13 @@ class ModuleInstance extends InstanceBase {
 			variables.event_start_time = startDateTime.time
 			variables.event_end_date = endDateTime.date
 			variables.event_end_time = endDateTime.time
+			
+			this.log('debug', 'Current event details:')
+			this.log('debug', `  Name: ${variables.event_name}`)
+			this.log('debug', `  Start: ${variables.event_start_date} ${variables.event_start_time}`)
+			this.log('debug', `  End: ${variables.event_end_date} ${variables.event_end_time}`)
+		} else {
+			this.log('debug', 'No current event active')
 		}
 
 		if (nextEvent) {
@@ -139,9 +158,17 @@ class ModuleInstance extends InstanceBase {
 			variables.next_event_start_time = startDateTime.time
 			variables.next_event_end_date = endDateTime.date
 			variables.next_event_end_time = endDateTime.time
+			
+			this.log('debug', 'Next event details:')
+			this.log('debug', `  Name: ${variables.next_event_name}`)
+			this.log('debug', `  Start: ${variables.next_event_start_date} ${variables.next_event_start_time}`)
+			this.log('debug', `  End: ${variables.next_event_end_date} ${variables.next_event_end_time}`)
+		} else {
+			this.log('debug', 'No next event scheduled')
 		}
 
 		this.setVariableValues(variables)
+		this.log('debug', '=== Variables Updated ===')
 	}
 
 	getNextOccurrence(event, now) {
@@ -175,11 +202,24 @@ class ModuleInstance extends InstanceBase {
 		
 		// Schedule window start check
 		const windowStartTime = new Date(event.start.getTime() - defaultWindowBefore)
+		const windowEndTime = new Date(event.end.getTime() + defaultWindowAfter)
+		
 		if (windowStartTime > now) {
 			const windowStartJob = schedule.scheduleJob(windowStartTime, () => {
 				this.checkFeedbackState()
+				this.updateEventVariables()
 			})
 			this.scheduleJobs.set(`window_start_${event.uid}`, windowStartJob)
+		}
+		
+		// Schedule window end check
+		if (windowEndTime > now) {
+			const windowEndJob = schedule.scheduleJob(windowEndTime, () => {
+				this.log('debug', `Window ended for event: "${event.summary || 'Untitled'}"`)
+				this.checkFeedbackState()
+				this.updateEventVariables()
+			})
+			this.scheduleJobs.set(`window_end_${event.uid}`, windowEndJob)
 		}
 		
 		// Schedule start action
@@ -187,6 +227,7 @@ class ModuleInstance extends InstanceBase {
 			const startJob = schedule.scheduleJob(event.start, () => {
 				this.handleEventStart(event)
 				this.checkFeedbackState()
+				this.updateEventVariables()
 				
 				// If this is a recurring event, schedule the next occurrence
 				if (event.recurrence && event.originalEvent) {
@@ -202,19 +243,10 @@ class ModuleInstance extends InstanceBase {
 		// Schedule end action
 		if (event.end > now) {
 			const endJob = schedule.scheduleJob(event.end, () => {
-				this.handleEventEnd(event)
 				this.checkFeedbackState()
+				this.updateEventVariables()
 			})
 			this.scheduleJobs.set(`end_${event.uid}`, endJob)
-		}
-		
-		// Schedule window end check
-		const windowEndTime = new Date(event.end.getTime() + defaultWindowAfter)
-		if (windowEndTime > now) {
-			const windowEndJob = schedule.scheduleJob(windowEndTime, () => {
-				this.checkFeedbackState()
-			})
-			this.scheduleJobs.set(`window_end_${event.uid}`, windowEndJob)
 		}
 	}
 
