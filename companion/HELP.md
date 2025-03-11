@@ -32,6 +32,9 @@ Next Event:
 
 ### Feedbacks
 - **Event Active**: Changes color when there is a currently active event
+- **Event Time Window**: Changes color during a configurable time window before and after events, as well as during the events. You can set:
+  - Minutes Before: How many minutes before an event to activate (0-120 minutes)
+  - Minutes After: How many minutes after an event to remain active (0-120 minutes)
 
 ## Support
 

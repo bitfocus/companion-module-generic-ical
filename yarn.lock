@@ -820,6 +820,7 @@ __metadata:
     node-ical: "npm:^0.17.2"
     node-schedule: "npm:^2.1.1"
     prettier: "npm:^3.4.2"
+    rrule: "npm:^2.8.1"
   languageName: unknown
   linkType: soft
 
@@ -2232,7 +2233,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rrule@npm:2.8.1":
+"rrule@npm:2.8.1, rrule@npm:^2.8.1":
   version: 2.8.1
   resolution: "rrule@npm:2.8.1"
   dependencies:

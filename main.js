@@ -5,6 +5,7 @@ const UpdateFeedbacks = require('./feedbacks')
 const UpdateVariableDefinitions = require('./variables')
 const ical = require('node-ical')
 const schedule = require('node-schedule')
+const { RRule } = require('rrule')
 
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
@@ -66,6 +67,7 @@ class ModuleInstance extends InstanceBase {
 	checkFeedbackState() {
 		// This will trigger all feedback to be recalculated
 		this.checkFeedbacks('eventActive')
+		this.checkFeedbacks('eventWindow')
 	}
 
 	formatEventDateTime(date) {
@@ -142,6 +144,80 @@ class ModuleInstance extends InstanceBase {
 		this.setVariableValues(variables)
 	}
 
+	getNextOccurrence(event, now) {
+		if (!event.rrule) return null
+
+		// Parse the RRule from the event
+		const rrule = RRule.fromString(event.rrule.toString())
+		
+		// Get the next occurrence after now
+		const nextDate = rrule.after(now)
+		if (!nextDate) return null
+
+		// Create a new event instance for this occurrence
+		const duration = event.end.getTime() - event.start.getTime()
+		return {
+			...event,
+			uid: `${event.uid}_${nextDate.getTime()}`,
+			start: nextDate,
+			end: new Date(nextDate.getTime() + duration),
+			recurrence: true,
+			originalEvent: event
+		}
+	}
+
+	addEventAndSchedule(event, now) {
+		this.events.set(event.uid, event)
+		
+		// Default window times (used for scheduling checks)
+		const defaultWindowBefore = 5 * 60 * 1000 // 5 minutes in milliseconds
+		const defaultWindowAfter = 5 * 60 * 1000 // 5 minutes in milliseconds
+		
+		// Schedule window start check
+		const windowStartTime = new Date(event.start.getTime() - defaultWindowBefore)
+		if (windowStartTime > now) {
+			const windowStartJob = schedule.scheduleJob(windowStartTime, () => {
+				this.checkFeedbackState()
+			})
+			this.scheduleJobs.set(`window_start_${event.uid}`, windowStartJob)
+		}
+		
+		// Schedule start action
+		if (event.start > now) {
+			const startJob = schedule.scheduleJob(event.start, () => {
+				this.handleEventStart(event)
+				this.checkFeedbackState()
+				
+				// If this is a recurring event, schedule the next occurrence
+				if (event.recurrence && event.originalEvent) {
+					const nextOccurrence = this.getNextOccurrence(event.originalEvent, event.start)
+					if (nextOccurrence) {
+						this.addEventAndSchedule(nextOccurrence, now)
+					}
+				}
+			})
+			this.scheduleJobs.set(`start_${event.uid}`, startJob)
+		}
+
+		// Schedule end action
+		if (event.end > now) {
+			const endJob = schedule.scheduleJob(event.end, () => {
+				this.handleEventEnd(event)
+				this.checkFeedbackState()
+			})
+			this.scheduleJobs.set(`end_${event.uid}`, endJob)
+		}
+		
+		// Schedule window end check
+		const windowEndTime = new Date(event.end.getTime() + defaultWindowAfter)
+		if (windowEndTime > now) {
+			const windowEndJob = schedule.scheduleJob(windowEndTime, () => {
+				this.checkFeedbackState()
+			})
+			this.scheduleJobs.set(`window_end_${event.uid}`, windowEndJob)
+		}
+	}
+
 	async configUpdated(config) {
 		this.config = config
 		// Reset and reload events when config changes
@@ -168,30 +244,25 @@ class ModuleInstance extends InstanceBase {
 			const events = await ical.fromURL(feedUrl)
 			this.updateStatus(InstanceStatus.Ok)
 			
+			const now = new Date()
+			
 			for (const [, event] of Object.entries(events)) {
 				if (event.type !== 'VEVENT') continue
 
-				const now = new Date()
+				// For recurring events, get the next occurrence
+				if (event.rrule) {
+					const nextOccurrence = this.getNextOccurrence(event, now)
+					if (nextOccurrence) {
+						this.addEventAndSchedule(nextOccurrence, now)
+					}
+					continue
+				}
+
 				// Skip past events
 				if (event.end < now) continue
 
-				this.events.set(event.uid, event)
-				
-				// Schedule start action
-				if (event.start > now) {
-					const startJob = schedule.scheduleJob(event.start, () => {
-						this.handleEventStart(event)
-					})
-					this.scheduleJobs.set(`start_${event.uid}`, startJob)
-				}
-
-				// Schedule end action
-				if (event.end > now) {
-					const endJob = schedule.scheduleJob(event.end, () => {
-						this.handleEventEnd(event)
-					})
-					this.scheduleJobs.set(`end_${event.uid}`, endJob)
-				}
+				// Handle regular events
+				this.addEventAndSchedule(event, now)
 			}
 
 			// Update variables and feedback state after loading events
