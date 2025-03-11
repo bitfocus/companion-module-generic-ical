@@ -207,7 +207,6 @@ class ModuleInstance extends InstanceBase {
 		if (windowStartTime > now) {
 			const windowStartJob = schedule.scheduleJob(windowStartTime, () => {
 				this.checkFeedbackState()
-				this.updateEventVariables()
 			})
 			this.scheduleJobs.set(`window_start_${event.uid}`, windowStartJob)
 		}
@@ -215,9 +214,7 @@ class ModuleInstance extends InstanceBase {
 		// Schedule window end check
 		if (windowEndTime > now) {
 			const windowEndJob = schedule.scheduleJob(windowEndTime, () => {
-				this.log('debug', `Window ended for event: "${event.summary || 'Untitled'}"`)
 				this.checkFeedbackState()
-				this.updateEventVariables()
 			})
 			this.scheduleJobs.set(`window_end_${event.uid}`, windowEndJob)
 		}
