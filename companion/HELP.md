@@ -36,6 +36,25 @@ Next Event:
   - Minutes Before: How many minutes before an event to activate (0-120 minutes)
   - Minutes After: How many minutes after an event to remain active (0-120 minutes)
 
+### Using Feedbacks with Triggers
+
+While the feedbacks above can be used to change button colors, their primary power comes from using them within Companion's Trigger system to perform automated actions based on calendar events.
+
+To set this up:
+
+1. Go to the **Triggers** tab in Companion
+2. Create a new trigger with the **+ Add** button
+3. Select **Feedback state** as the trigger type
+4. Choose one of this module's feedbacks (Event Active or Event Time Window)
+5. Configure the feedback settings as needed
+6. Add the actions you want to execute when the feedback becomes active/inactive
+
+This allows you to automatically perform actions when events start or end, such as:
+- Switching scenes in your streaming software
+- Adjusting lighting or audio settings
+- Starting or stopping recordings
+- Sending commands to other connected devices
+
 ## Support
 
 For help and discussions about this module, please visit:
