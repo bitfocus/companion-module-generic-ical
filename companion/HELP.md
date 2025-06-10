@@ -39,4 +39,4 @@ Next Event:
 ## Support
 
 For help and discussions about this module, please visit:
-https://github.com/crackley/companion-module-generic-ical/issues
+https://github.com/bitfocus/companion-module-generic-ical/issues
