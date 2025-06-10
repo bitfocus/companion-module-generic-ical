@@ -14,7 +14,7 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "^1.11.0",
-		"node-ical": "^0.17.2",
+		"node-ical": "^0.20.1",
 		"node-schedule": "^2.1.1",
 		"rrule": "^2.8.1"
 	},
