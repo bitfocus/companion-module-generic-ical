@@ -1,12 +1,14 @@
 # Feature Suggestions for iCal Companion Module
 
 ## 1. Event Filtering and Categories
+
 - Support for filtering events by calendar categories/colors
 - Configuration options for event type tracking (meetings, all-day events)
 - Ignore patterns/keywords for specific events
 - Custom event categorization
 
 ## 2. Time-based Enhancements
+
 - Countdown variables for upcoming events
   - Time until next event starts
   - Time remaining in current event
@@ -14,6 +16,7 @@
 - Dynamic time-based triggers
 
 ## 3. Advanced Event Management
+
 - Multi-feed support
   - Feed-specific actions and variables
   - Feed-specific status monitoring
@@ -22,6 +25,7 @@
 - Event priority handling
 
 ## 4. Error Handling & Reliability
+
 - Automatic retry mechanism for failed feed fetches
 - Configurable refresh intervals
 - Offline caching system
@@ -29,6 +33,7 @@
 - Error logging improvements
 
 ## 5. Additional Actions & Feedbacks
+
 - Next event navigation action
 - Duration threshold feedbacks
 - Event conflict detection

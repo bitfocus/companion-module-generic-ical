@@ -5,13 +5,13 @@ module.exports = function (self) {
 			type: 'boolean',
 			label: 'Event Status',
 			defaultStyle: {
-				bgcolor: 0xFF0000, // Red
-				color: 0xFFFFFF,   // White
+				bgcolor: 0xff0000, // Red
+				color: 0xffffff, // White
 			},
 			options: [],
-			callback: (feedback) => {
+			callback: () => {
 				const now = new Date()
-				
+
 				// Check all events for any that are currently active
 				for (const [, event] of self.events) {
 					if (event.start <= now && event.end >= now) {
@@ -26,8 +26,8 @@ module.exports = function (self) {
 			type: 'boolean',
 			label: 'Event Window Status',
 			defaultStyle: {
-				bgcolor: 0x00FF00, // Green
-				color: 0x000000,   // Black
+				bgcolor: 0x00ff00, // Green
+				color: 0x000000, // Black
 			},
 			options: [
 				{
@@ -51,19 +51,21 @@ module.exports = function (self) {
 				const now = new Date()
 				const minutesBefore = feedback.options.minutesBefore || 5
 				const minutesAfter = feedback.options.minutesAfter || 5
-				
+
 				// Check all events
 				for (const [, event] of self.events) {
-					const beforeWindow = new Date(event.start.getTime() - (minutesBefore * 60 * 1000))
-					const afterWindow = new Date(event.end.getTime() + (minutesAfter * 60 * 1000))
-					
+					const beforeWindow = new Date(event.start.getTime() - minutesBefore * 60 * 1000)
+					const afterWindow = new Date(event.end.getTime() + minutesAfter * 60 * 1000)
+
 					// Check if we're:
 					// 1. In the window before the event OR
 					// 2. During the event OR
 					// 3. In the window after the event
-					if ((now >= beforeWindow && now <= event.start) || 
+					if (
+						(now >= beforeWindow && now <= event.start) ||
 						(now >= event.start && now <= event.end) ||
-						(now >= event.end && now <= afterWindow)) {
+						(now >= event.end && now <= afterWindow)
+					) {
 						return true
 					}
 				}
