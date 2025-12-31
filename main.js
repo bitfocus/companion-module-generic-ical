@@ -17,11 +17,11 @@ class ModuleInstance extends InstanceBase {
 
 	async init(config) {
 		this.config = config
-		this.updateStatus(InstanceStatus.Ok)
+		this.updateStatus(InstanceStatus.Connecting)
 
 		if (this.config.icalUrl) {
 			await this.setupIcalFeed()
-
+			this.updateStatus(InstanceStatus.Ok)
 			// Set up feed refresh interval
 			const refreshMinutes = Math.max(1, Math.min(1440, parseInt(this.config.refreshInterval) || 5))
 			this.log('debug', `Setting up feed refresh interval: ${refreshMinutes} minutes`)
@@ -33,6 +33,8 @@ class ModuleInstance extends InstanceBase {
 				},
 				refreshMinutes * 60 * 1000,
 			)
+		} else {
+			this.updateStatus(InstanceStatus.BadConfig, 'No iCal URL provided')
 		}
 
 		// Start checking for active events periodically
