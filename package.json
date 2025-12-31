@@ -13,20 +13,20 @@
 		"url": "git+https://github.com/bitfocus/companion-module-generic-ical.git"
 	},
 	"dependencies": {
-		"@companion-module/base": "^1.11.0",
-		"node-ical": "^0.20.1",
+		"@companion-module/base": "~1.14.1",
+		"node-ical": "^0.22.1",
 		"node-schedule": "^2.1.1",
 		"rrule": "^2.8.1"
 	},
 	"devDependencies": {
-		"@companion-module/tools": "^2.1.1",
-		"@eslint/js": "^9.19.0",
-		"eslint": "^9.19.0",
-		"eslint-config-prettier": "^10.0.1",
-		"eslint-plugin-n": "^17.15.1",
-		"eslint-plugin-prettier": "^5.2.3",
-		"prettier": "^3.4.2"
+		"@companion-module/tools": "^2.5.0",
+		"@eslint/js": "^9.39.2",
+		"eslint": "^9.39.2",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-n": "^17.23.1",
+		"eslint-plugin-prettier": "^5.5.4",
+		"prettier": "^3.7.4"
 	},
 	"prettier": "@companion-module/tools/.prettierrc.json",
-	"packageManager": "yarn@4.5.3"
+	"packageManager": "yarn@4.12.0"
 }
