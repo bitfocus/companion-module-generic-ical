@@ -9,7 +9,7 @@ module.exports = function (self) {
 				color: 0xffffff, // White
 			},
 			options: [],
-			callback: (feedback) => {
+			callback: () => {
 				const now = new Date()
 
 				// Check all events for any that are currently active

@@ -10,7 +10,7 @@ module.exports = function (self) {
 		checkCurrentEvents: {
 			name: 'Check Current Events',
 			options: [],
-			callback: async (action) => {
+			callback: async () => {
 				const now = new Date()
 				let foundActive = false
 
