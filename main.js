@@ -325,14 +325,16 @@ class ModuleInstance extends InstanceBase {
 			{
 				type: 'textinput',
 				id: 'icalUrl',
-				label: 'iCal Feed URL (supports webcal:// or https://)',
+				label: 'iCal Feed URL',
+				description: 'iCal Feed URL (supports webcal:// or https://)',
 				width: 12,
 				regex: Regex.URL,
 			},
 			{
 				type: 'number',
 				id: 'refreshInterval',
-				label: 'Refresh Interval (minutes)',
+				label: 'Refresh Interval',
+				description: 'How often to check for calendar updates in minutes',
 				width: 6,
 				min: 1,
 				max: 1440,
