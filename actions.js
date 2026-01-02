@@ -18,12 +18,8 @@ module.exports = function (self) {
 					if (event.start <= now && event.end >= now) {
 						foundActive = true
 						self.updateEventVariables()
-						const startTime = event.start.toLocaleTimeString('en-US', {
-							hour12: false,
-							hour: '2-digit',
-							minute: '2-digit',
-						})
-						const endTime = event.end.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+						const startTime = self.formatEventDateTime(event.start).time
+						const endTime = self.formatEventDateTime(event.end).time
 						self.log('info', `Current active event: ${event.summary} (${startTime} - ${endTime})`)
 					}
 				}

@@ -5,19 +5,22 @@ const UpdateFeedbacks = require('./feedbacks')
 const UpdateVariableDefinitions = require('./variables')
 const ical = require('node-ical')
 const schedule = require('node-schedule')
-const { RRule } = require('rrule')
 
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 		this.scheduleJobs = new Map()
 		this.events = new Map()
+		this.refreshCalendarInterval = null
 		this.activeCheckInterval = null
 	}
 
 	async init(config) {
 		this.config = config
 		this.updateStatus(InstanceStatus.Connecting)
+		this.updateActions()
+		this.updateFeedbacks()
+		this.updateVariableDefinitions()
 
 		if (this.config.icalUrl) {
 			await this.setupIcalFeed()
@@ -26,23 +29,13 @@ class ModuleInstance extends InstanceBase {
 			const refreshMinutes = Math.max(1, Math.min(1440, parseInt(this.config.refreshInterval) || 5))
 			this.log('debug', `Setting up feed refresh interval: ${refreshMinutes} minutes`)
 
-			setInterval(
-				async () => {
-					this.log('debug', '=== Feed Refresh Interval Triggered ===')
-					await this.setupIcalFeed()
-				},
-				refreshMinutes * 60 * 1000,
-			)
+			this.startRefreshCalendarInterval()
 		} else {
 			this.updateStatus(InstanceStatus.BadConfig, 'No iCal URL provided')
 		}
 
 		// Start checking for active events periodically
 		this.startActiveEventCheck()
-
-		this.updateActions()
-		this.updateFeedbacks()
-		this.updateVariableDefinitions()
 	}
 
 	async destroy() {
@@ -59,6 +52,26 @@ class ModuleInstance extends InstanceBase {
 			clearInterval(this.activeCheckInterval)
 			this.activeCheckInterval = null
 		}
+		if (this.refreshCalendarInterval) {
+			clearInterval(this.refreshCalendarInterval)
+			this.refreshCalendarInterval = null
+		}
+	}
+
+	startRefreshCalendarInterval() {
+		// Clear any existing interval
+		if (this.refreshCalendarInterval) {
+			clearInterval(this.refreshCalendarInterval)
+		}
+
+		// Refresh the calendar feed based on the configured interval
+		this.refreshCalendarInterval = setInterval(
+			() => {
+				this.log('debug', 'Refreshing iCal feed...')
+				this.setupIcalFeed()
+			},
+			this.config.refreshInterval * 60 * 1000,
+		)
 	}
 
 	startActiveEventCheck() {
@@ -87,15 +100,14 @@ class ModuleInstance extends InstanceBase {
 	formatEventDateTime(date) {
 		if (!date) return { date: '', time: '' }
 
-		// Format date as YYYY-MM-DD
-		const dateStr = date.toISOString().split('T')[0]
+		const year = date.getFullYear()
+		const month = String(date.getMonth() + 1).padStart(2, '0')
+		const day = String(date.getDate()).padStart(2, '0')
+		const dateStr = `${year}-${month}-${day}`
 
-		// Format time as HH:MM (24-hour format)
-		const timeStr = date.toLocaleTimeString('en-US', {
-			hour12: false,
-			hour: '2-digit',
-			minute: '2-digit',
-		})
+		const hours = String(date.getHours()).padStart(2, '0')
+		const minutes = String(date.getMinutes()).padStart(2, '0')
+		const timeStr = `${hours}:${minutes}`
 
 		return { date: dateStr, time: timeStr }
 	}
@@ -179,11 +191,43 @@ class ModuleInstance extends InstanceBase {
 	getNextOccurrence(event, now) {
 		if (!event.rrule) return null
 
-		// Parse the RRule from the event
-		const rrule = RRule.fromString(event.rrule.toString())
+		// Use the existing RRule object directly to preserve timezone context
+		// (fromString/toString roundtrip can strip TZID or misinterpret local vs UTC)
+		let nextDate = event.rrule.after(now)
 
-		// Get the next occurrence after now
-		const nextDate = rrule.after(now)
+		// Loop to find a valid occurrence that hasn't been overridden by an exception
+		while (nextDate) {
+			if (event.rrule.origOptions && event.rrule.origOptions.tzid) {
+				nextDate = new Date(
+					nextDate.getUTCFullYear(),
+					nextDate.getUTCMonth(),
+					nextDate.getUTCDate(),
+					nextDate.getUTCHours(),
+					nextDate.getUTCMinutes(),
+					nextDate.getUTCSeconds(),
+				)
+			}
+
+			// Check if this date has been overridden by a recurrence exception
+			let isOverridden = false
+			if (event.recurrences) {
+				for (const r of Object.values(event.recurrences)) {
+					// Check if recurrenceid matches this generated date
+					if (r.recurrenceid && r.recurrenceid.getTime() === nextDate.getTime()) {
+						isOverridden = true
+						break
+					}
+				}
+			}
+
+			if (isOverridden) {
+				nextDate = event.rrule.after(nextDate)
+			} else {
+				// Found a valid, non-overridden occurrence
+				break
+			}
+		}
+
 		if (!nextDate) return null
 
 		// Create a new event instance for this occurrence
@@ -264,8 +308,7 @@ class ModuleInstance extends InstanceBase {
 		if (this.config.icalUrl) {
 			await this.setupIcalFeed()
 		}
-
-		// Restart the active event check
+		this.startRefreshCalendarInterval()
 		this.startActiveEventCheck()
 	}
 
@@ -282,6 +325,22 @@ class ModuleInstance extends InstanceBase {
 
 			for (const [, event] of Object.entries(events)) {
 				if (event.type !== 'VEVENT') continue
+
+				// Handle recurrences (exceptions)
+				if (event.recurrences) {
+					for (const recurrence of Object.values(event.recurrences)) {
+						if (recurrence.type !== 'VEVENT') continue
+						if (recurrence.end < now) continue
+
+						recurrence.originalEvent = event
+						// Exceptions share the same UID as the original event, so they overwrite each other in the map.
+						// We must give them a unique UID.
+						if (recurrence.recurrenceid) {
+							recurrence.uid = `${recurrence.uid}_${recurrence.recurrenceid.getTime()}`
+						}
+						this.addEventAndSchedule(recurrence, now)
+					}
+				}
 
 				// For recurring events, get the next occurrence
 				if (event.rrule) {
