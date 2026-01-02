@@ -191,51 +191,84 @@ class ModuleInstance extends InstanceBase {
 	getNextOccurrence(event, now) {
 		if (!event.rrule) return null
 
-		// Use the existing RRule object directly to preserve timezone context
-		// (fromString/toString roundtrip can strip TZID or misinterpret local vs UTC)
-		let nextDate = event.rrule.after(now)
-
-		// Loop to find a valid occurrence that hasn't been overridden by an exception
-		while (nextDate) {
-			if (event.rrule.origOptions && event.rrule.origOptions.tzid) {
-				nextDate = new Date(
-					nextDate.getUTCFullYear(),
-					nextDate.getUTCMonth(),
-					nextDate.getUTCDate(),
-					nextDate.getUTCHours(),
-					nextDate.getUTCMinutes(),
-					nextDate.getUTCSeconds(),
-				)
-			}
-
+		// Helper function to check if a date is overridden
+		const isDateOverridden = (date) => {
 			// Check if this date has been overridden by a recurrence exception
-			let isOverridden = false
 			if (event.recurrences) {
 				for (const r of Object.values(event.recurrences)) {
-					// Check if recurrenceid matches this generated date
-					if (r.recurrenceid && r.recurrenceid.getTime() === nextDate.getTime()) {
-						isOverridden = true
-						break
+					if (r.recurrenceid && r.recurrenceid.getTime() === date.getTime()) {
+						return true
 					}
 				}
 			}
 
 			// Check if this date is excluded (EXDATE)
-			if (!isOverridden && event.exdate) {
+			if (event.exdate) {
 				for (const ex of Object.values(event.exdate)) {
-					if (ex instanceof Date && ex.getTime() === nextDate.getTime()) {
-						isOverridden = true
-						break
+					if (ex instanceof Date && ex.getTime() === date.getTime()) {
+						return true
 					}
 				}
 			}
 
-			if (isOverridden) {
-				nextDate = event.rrule.after(nextDate)
-			} else {
+			return false
+		}
+
+		// Helper function to apply timezone conversion if needed
+		const applyTimezoneConversion = (date) => {
+			if (event.rrule.origOptions && event.rrule.origOptions.tzid) {
+				return new Date(
+					date.getUTCFullYear(),
+					date.getUTCMonth(),
+					date.getUTCDate(),
+					date.getUTCHours(),
+					date.getUTCMinutes(),
+					date.getUTCSeconds(),
+				)
+			}
+			return date
+		}
+
+		// Use between() to find all occurrences from start of today to end of today
+		const startOfToday = new Date(now)
+		startOfToday.setHours(0, 0, 0, 0)
+		const endOfToday = new Date(now)
+		endOfToday.setHours(23, 59, 59, 999)
+
+		const todayOccurrences = event.rrule.between(startOfToday, endOfToday, true)
+
+		// Check today's occurrences - prefer ones that haven't ended yet
+		for (const candidate of todayOccurrences) {
+			const dateToCheck = applyTimezoneConversion(candidate)
+			const duration = event.end.getTime() - event.start.getTime()
+			const endTime = dateToCheck.getTime() + duration
+
+			// Use this occurrence if it hasn't ended yet and isn't overridden
+			if (endTime > now.getTime() && !isDateOverridden(dateToCheck)) {
+				return {
+					...event,
+					uid: `${event.uid}_${dateToCheck.getTime()}`,
+					start: dateToCheck,
+					end: new Date(endTime),
+					recurrence: true,
+					originalEvent: event,
+				}
+			}
+		}
+
+		// If no valid occurrence today, get the next one after now
+		let nextDate = event.rrule.after(now)
+
+		// Loop to find a valid occurrence that hasn't been overridden
+		while (nextDate) {
+			nextDate = applyTimezoneConversion(nextDate)
+
+			if (!isDateOverridden(nextDate)) {
 				// Found a valid, non-overridden occurrence
 				break
 			}
+
+			nextDate = event.rrule.after(nextDate)
 		}
 
 		if (!nextDate) return null
