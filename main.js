@@ -220,6 +220,16 @@ class ModuleInstance extends InstanceBase {
 				}
 			}
 
+			// Check if this date is excluded (EXDATE)
+			if (!isOverridden && event.exdate) {
+				for (const ex of Object.values(event.exdate)) {
+					if (ex instanceof Date && ex.getTime() === nextDate.getTime()) {
+						isOverridden = true
+						break
+					}
+				}
+			}
+
 			if (isOverridden) {
 				nextDate = event.rrule.after(nextDate)
 			} else {
@@ -320,6 +330,13 @@ class ModuleInstance extends InstanceBase {
 
 			const events = await ical.fromURL(feedUrl)
 			this.updateStatus(InstanceStatus.Ok)
+
+			// Clean up existing events and jobs before processing new ones
+			for (const job of this.scheduleJobs.values()) {
+				job.cancel()
+			}
+			this.scheduleJobs.clear()
+			this.events.clear()
 
 			const now = new Date()
 
