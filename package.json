@@ -1,6 +1,6 @@
 {
 	"name": "companion-module-generic-ical",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "iCal feed integration for Companion",
 	"main": "main.js",
 	"scripts": {
