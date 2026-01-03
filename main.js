@@ -13,6 +13,7 @@ class ModuleInstance extends InstanceBase {
 		this.events = new Map()
 		this.refreshCalendarInterval = null
 		this.activeCheckInterval = null
+		this.isRefreshing = false
 	}
 
 	async init(config) {
@@ -66,9 +67,13 @@ class ModuleInstance extends InstanceBase {
 
 		// Refresh the calendar feed based on the configured interval
 		this.refreshCalendarInterval = setInterval(
-			() => {
+			async () => {
 				this.log('debug', 'Refreshing iCal feed...')
-				this.setupIcalFeed()
+				try {
+					await this.setupIcalFeed()
+				} catch (error) {
+					this.log('error', `Error refreshing calendar: ${error.toString()}`)
+				}
 			},
 			this.config.refreshInterval * 60 * 1000,
 		)
@@ -319,10 +324,12 @@ class ModuleInstance extends InstanceBase {
 				this.updateEventVariables()
 
 				// If this is a recurring event, schedule the next occurrence
+				// Use current time (not the stale 'now' from when event was added)
 				if (event.recurrence && event.originalEvent) {
-					const nextOccurrence = this.getNextOccurrence(event.originalEvent, event.start)
+					const currentTime = new Date()
+					const nextOccurrence = this.getNextOccurrence(event.originalEvent, currentTime)
 					if (nextOccurrence) {
-						this.addEventAndSchedule(nextOccurrence, now)
+						this.addEventAndSchedule(nextOccurrence, currentTime)
 					}
 				}
 			})
@@ -332,8 +339,7 @@ class ModuleInstance extends InstanceBase {
 		// Schedule end action
 		if (event.end > now) {
 			const endJob = schedule.scheduleJob(event.end, () => {
-				this.checkFeedbackState()
-				this.updateEventVariables()
+				this.handleEventEnd(event)
 			})
 			this.scheduleJobs.set(`end_${event.uid}`, endJob)
 		}
@@ -356,6 +362,13 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	async setupIcalFeed() {
+		// Prevent overlapping refresh calls
+		if (this.isRefreshing) {
+			this.log('debug', 'Calendar refresh already in progress, skipping...')
+			return
+		}
+
+		this.isRefreshing = true
 		try {
 			// Convert webcal:// to https://
 			const feedUrl = this.config.icalUrl.replace(/^webcal:\/\//i, 'https://')
@@ -414,6 +427,8 @@ class ModuleInstance extends InstanceBase {
 		} catch (error) {
 			this.log('error', 'Failed to fetch iCal feed: ' + error.toString())
 			this.updateStatus(InstanceStatus.Error, error.toString())
+		} finally {
+			this.isRefreshing = false
 		}
 	}
 
